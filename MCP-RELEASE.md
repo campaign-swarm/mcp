@@ -91,7 +91,7 @@ credentials; no real API key, token, OTP, or credential is committed.
 
 | Destination | Status |
 | --- | --- |
-| mcpservers.org | **Live** at https://mcpservers.org/servers/campaignswarm-com. The page still shows the older 25-tool copy; its “Request update” control was used on 2026-11-15 and the request was accepted. No paid placement was purchased. |
+| mcpservers.org | **Live** at https://mcpservers.org/servers/campaignswarm-com. The page still shows the older 25-tool copy and “read-only until approved”; its “Request update” control was re-triggered on 2026-11-15 at 05:54 UTC, the POST returned HTTP 200, and the page was unchanged immediately afterward. No paid placement was purchased. |
 | Glama | **Live and healthy** at https://glama.ai/mcp/connectors/com.campaignswarm.mcp/campaign-swarm. Ownership verified; public page reports Status Healthy, 35 tools, last tested 2026-11-15 16:45. A dedicated viewer key is configured under Admin → Test Profile → API Key → Bearer Authentication; its 16:45 test passed in 2,768 ms. The key is stored only in Glama, not in this repository. |
 | Launch MCP | Submitted through the keyless REST API. Live readback returns `status: pending`, transport `hosted`, category `Productivity`, and no listing URL. No authenticated edit endpoint exists for a pending submission, so it was left intact rather than duplicated. |
 | AgenticSkills | Submitted through the public MCP form; pending weekly triage. The public repo serves the full release copy. |
@@ -99,11 +99,11 @@ credentials; no real API key, token, OTP, or credential is committed.
 | GitHub MCP Registry | Follows the official registry; the entry now exists. No separate form. |
 | PulseMCP | Submissions paused since September 3, 2026; it imports the official registry when it reopens. The official entry now exists, so no separate submission is needed. |
 | MCP Market | Submitted to the $0 Free Queue; API check returns `exists:false`; pending ~4–6 weeks. The listing is generated from the public repository with the full release copy. Paid upgrades ($29/$69) not purchased. |
-| MCP.so | Account created under support@; authenticated free plan returns “Free submissions are currently paused”; $39 paid path not purchased. |
-| Docker MCP Catalog | Parked by user request. PR #7137 remains open; ci.yaml run 43659671963 is action_required with 0 jobs and awaits a Docker maintainer’s approval. |
+| MCP.so | Account created under support@. The authenticated free remote-server submission was re-attempted on 2026-11-15 at 05:54 UTC; `POST /api/marketplace-submissions` returned HTTP 200 with `{"code":-1,"message":"Free submissions are currently paused"}`. The $39 paid path was not purchased and no listing was created. |
+| Docker MCP Catalog | PR #7137 is open and mergeable but `unstable`; ci.yaml run 43659671963 completed as `action_required` with 0 jobs and awaits a Docker maintainer’s approval. The separate test-credentials form was submitted on 2026-11-15 with PR #7137, support@campaignswarm.com, and a dedicated read-only key; Google Forms confirmed “Got it. We'll email you with a resolution.” No catalog listing exists yet. |
 | Smithery | Sign-in, dashboard, /new, and /servers/new all show the October 31, 2026 shutdown notice; no submission path. |
-| Claude Connectors | OAuth is live and verified; paid Claude plan and reviewer test account remain. Not submitted. |
-| OpenAI Apps | OAuth is live and verified; verified publisher, domain challenge, tool scan, and review tests remain. Not submitted. |
+| Claude Connectors | OAuth is live and verified. Login was started at claude.ai with support@campaignswarm.com; the page sent an email link/code and showed “To continue, click the link sent to support@campaignswarm.com” / “Enter verification code”. No session or account is confirmed, so not submitted. Paid Claude plan and reviewer test account remain. |
+| OpenAI Apps | OAuth is live and verified. Account creation was started at platform.openai.com with support@campaignswarm.com; auth.openai.com/email-verification sent a six-digit code “to create your account”. No code was read, so no account or session is confirmed and not submitted. Verified publisher, domain challenge, tool scan, and review tests remain. |
 | Cursor | Cursor Directory submission is unpublished/hidden after a failed security scan; rechecked 2026-11-15 after the user confirmed the GitHub security review, and the admin re-run is still pending. The official Marketplace uses a separate publisher application. Do not resubmit. |
 
 ## Security check
