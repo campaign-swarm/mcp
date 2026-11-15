@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "campaign-swarm",
+  "version": "0.1.0",
+  "description": "Run social campaigns end to end from Cursor: inspect accounts, plans, posts, comments, ads and performance; create drafts, schedules and approval items.",
+  "author": {
+    "name": "Campaign Swarm",
+    "email": "support@campaignswarm.com",
+    "url": "https://campaignswarm.com"
+  },
+  "homepage": "https://campaignswarm.com",
+  "repository": "https://github.com/campaign-swarm/mcp",
+  "license": "MIT",
+  "keywords": [
+    "marketing",
+    "social media",
+    "campaigns",
+    "content",
+    "ads",
+    "approvals"
+  ]
+}

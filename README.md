@@ -87,8 +87,34 @@ API-key fallback:
 
 ### Cursor
 
-Add a remote MCP server named `campaign-swarm` with the URL above and the same
-`Authorization` header.
+OAuth (preferred; live in production) — no header is needed:
+
+```json
+{
+  "mcpServers": {
+    "campaign-swarm": {
+      "type": "streamable-http",
+      "url": "https://mcp.campaignswarm.com/mcp"
+    }
+  }
+}
+```
+
+API-key fallback:
+
+```json
+{
+  "mcpServers": {
+    "campaign-swarm": {
+      "type": "streamable-http",
+      "url": "https://mcp.campaignswarm.com/mcp",
+      "headers": {
+        "Authorization": "Bearer csw_REPLACE_WITH_YOUR_KEY"
+      }
+    }
+  }
+}
+```
 
 ### VS Code
 
