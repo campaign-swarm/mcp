@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.campaign-swarm/mcp",
+  "description": "Run social campaigns end to end: plan, create, schedule, publish, measure, and optimize.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/campaign-swarm/mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://campaignswarm.com",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.campaignswarm.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer API key issued in Campaign Swarm (csw_...)",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
