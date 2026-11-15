@@ -31,14 +31,27 @@ The implementation is in `src/oauth.ts`; setup is documented in `.env.example`
 and `README.md`. The server is enabled by `OAUTH_ENCRYPTION_KEY` and a writable
 `OAUTH_STATE_FILE`. It is deliberately single-process state.
 
-**Production gate:** the hosted endpoint is still running the API-key-only
-build. On 2026-11-15,
-`https://mcp.campaignswarm.com/.well-known/oauth-protected-resource/mcp` and
-`https://mcp.campaignswarm.com/.well-known/oauth-authorization-server` both
-returned 404, and the anonymous challenge advertised only
-`Bearer realm="Campaign Swarm"`. Claude/OpenAI submission remains blocked until
-this commit is deployed and both discovery URLs return 200. The full reviewer
-pack is in `v1/docs/MCP-CLIENT-SUBMISSIONS.md`.
+## Production deployment
+
+The hosted service is live with OAuth enabled. It runs from the manual checkout
+at `/opt/campaign-swarm/mcp` under `campaign-swarm-mcp.service`, behind nginx on
+`127.0.0.1:3101`. The deployed commit is `7b70335`. The unit reads the mode-600
+`/opt/campaign-swarm/mcp/.env`, which now sets `MCP_PUBLIC_URL`,
+`OAUTH_STATE_FILE=/var/lib/campaign-swarm/mcp-oauth.json`, and
+`OAUTH_ENCRYPTION_KEY`. The state file is mode 600, owner `campaign`.
+
+Both public discovery URLs return 200. A full production run passed DCR, S256
+authorization, API-key consent, token exchange, OAuth MCP initialize/tools-list,
+refresh rotation, and revocation. Direct `csw_...` bearer initialize/tools-list
+also passed. A token issued before a real service restart was accepted
+afterward, and a refresh token still worked after that restart. The temporary
+E2E key was revoked and the test token state was cleared afterward.
+
+The deployment is manual, as recorded in the project handover: archive the
+committed source into `/opt/campaign-swarm/mcp`, install the frozen lockfile,
+and restart only `campaign-swarm-mcp.service`. There is no repo deploy
+workflow and no `.git` checkout on the host. The full reviewer pack is in
+`v1/docs/MCP-CLIENT-SUBMISSIONS.md`.
 
 ## Registry readiness
 
@@ -89,8 +102,8 @@ credentials; no real API key, token, OTP, or credential is committed.
 | MCP.so | Account created under support@; authenticated free plan returns “Free submissions are currently paused”; $39 paid path not purchased. |
 | Docker MCP Catalog | Parked by user request. PR #7137 remains open; ci.yaml run 43659671963 is action_required with 0 jobs and awaits a Docker maintainer’s approval. |
 | Smithery | Sign-in, dashboard, /new, and /servers/new all show the October 31, 2026 shutdown notice; no submission path. |
-| Claude Connectors | OAuth implementation ready; production deploy, paid Claude plan, and reviewer test account remain. Not submitted. |
-| OpenAI Apps | OAuth implementation ready; production deploy, verified publisher, domain challenge, tool scan, and review tests remain. Not submitted. |
+| Claude Connectors | OAuth is live and verified; paid Claude plan and reviewer test account remain. Not submitted. |
+| OpenAI Apps | OAuth is live and verified; verified publisher, domain challenge, tool scan, and review tests remain. Not submitted. |
 | Cursor | Cursor Directory submission is unpublished/hidden after a failed security scan and an admin re-run is pending. The official Marketplace uses a separate publisher application. Do not resubmit. |
 
 ## Security check

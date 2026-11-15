@@ -45,18 +45,18 @@ OAuth is enabled on the server by setting `OAUTH_ENCRYPTION_KEY` and a writable
 `OAUTH_STATE_FILE`; see `.env.example`. API-key clients continue to work with
 or without OAuth enabled.
 
-The implementation is in this repository, but the hosted service must be
-deployed from this commit with those variables before OAuth clients can use it.
-Until that deployment, `https://mcp.campaignswarm.com/.well-known/oauth-protected-resource/mcp`
-returns 404 and Claude/OpenAI cannot complete discovery; API-key clients keep
-working. Do not submit the hosted endpoint to an OAuth-only directory until the
-live discovery endpoints return 200.
+The hosted service is running this build with OAuth enabled as of 2026-11-15.
+Both discovery endpoints return 200, and a full authorization, refresh, and
+restart-persistence flow has passed against `https://mcp.campaignswarm.com`.
+API-key clients continue to work unchanged. The service stores clients and
+tokens in a mode-600 state file on persistent disk; it is single-process state,
+so do not run multiple MCP replicas against the same file.
 
 ## Client configuration
 
 ### Claude Desktop / Claude Code
 
-OAuth (preferred once the hosted deployment is live) — no header is needed:
+OAuth (preferred; live in production) — no header is needed:
 
 ```json
 {
