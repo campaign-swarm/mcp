@@ -84,6 +84,31 @@ function b64(value: Buffer): string {
   return value.toString("base64url");
 }
 
+/**
+ * The in-memory model stores timestamps as ISO strings. A JSON round-trip
+ * therefore loses the Date type that the verifier expects. Restore every
+ * date-shaped field when loading the snapshot, including nested client and
+ * grant records.
+ */
+function reviveDates<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => reviveDates(item)) as T;
+  }
+  if (value && typeof value === "object") {
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof child === "string" && /At$/.test(key)) {
+        const date = new Date(child);
+        if (!Number.isNaN(date.getTime())) {
+          (value as Record<string, unknown>)[key] = date;
+          continue;
+        }
+      }
+      (value as Record<string, unknown>)[key] = reviveDates(child);
+    }
+  }
+  return value;
+}
+
 export function seal(value: string, key: Buffer): string {
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
@@ -191,6 +216,7 @@ class FileOAuthServerModel extends MemoryOAuthServerModel {
       }
       return value;
     }) as Record<string, Array<[string, any]>>;
+    reviveDates(parsed);
     const maps = this.maps();
     for (const [name, entries] of Object.entries(parsed)) {
       const map = maps[name];
