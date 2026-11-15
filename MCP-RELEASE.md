@@ -92,7 +92,7 @@ credentials; no real API key, token, OTP, or credential is committed.
 | Destination | Status |
 | --- | --- |
 | mcpservers.org | **Live** at https://mcpservers.org/servers/campaignswarm-com. The page still shows the older 25-tool copy; its “Request update” control was used on 2026-11-15 and the request was accepted. No paid placement was purchased. |
-| Glama | Hosted connector submitted and marked unhealthy after two 401 checks because the Glama test profile sends no Authorization header. Glama holds no Campaign Swarm credential. A dedicated read-only test key still must be created and entered under Admin → Test Profile; no key is stored in this repository. |
+| Glama | **Live and healthy** at https://glama.ai/mcp/connectors/com.campaignswarm.mcp/campaign-swarm. Ownership verified; public page reports Status Healthy, 35 tools, last tested 2026-11-15 16:45. A dedicated viewer key is configured under Admin → Test Profile → API Key → Bearer Authentication; its 16:45 test passed in 2,768 ms. The key is stored only in Glama, not in this repository. |
 | Launch MCP | Submitted through the keyless REST API. Live readback returns `status: pending`, transport `hosted`, category `Productivity`, and no listing URL. No authenticated edit endpoint exists for a pending submission, so it was left intact rather than duplicated. |
 | AgenticSkills | Submitted through the public MCP form; pending weekly triage. The public repo serves the full release copy. |
 | Official MCP Registry | **Published** `io.github.campaign-swarm/mcp@0.1.0` on 2026-11-15 via GitHub OIDC. Registry status `active`, `publishedAt` `2026-11-15T05:04:50.296351Z`, search count 1. Publish run [43679498960](https://github.com/campaign-swarm/mcp/actions/runs/43679498960) succeeded; no device code, PAT, or registry token. |
@@ -104,7 +104,7 @@ credentials; no real API key, token, OTP, or credential is committed.
 | Smithery | Sign-in, dashboard, /new, and /servers/new all show the October 31, 2026 shutdown notice; no submission path. |
 | Claude Connectors | OAuth is live and verified; paid Claude plan and reviewer test account remain. Not submitted. |
 | OpenAI Apps | OAuth is live and verified; verified publisher, domain challenge, tool scan, and review tests remain. Not submitted. |
-| Cursor | Cursor Directory submission is unpublished/hidden after a failed security scan and an admin re-run is pending. The official Marketplace uses a separate publisher application. Do not resubmit. |
+| Cursor | Cursor Directory submission is unpublished/hidden after a failed security scan; rechecked 2026-11-15 after the user confirmed the GitHub security review, and the admin re-run is still pending. The official Marketplace uses a separate publisher application. Do not resubmit. |
 
 ## Security check
 
@@ -115,9 +115,10 @@ independent history scan below found no live credential. The public
 `campaign-swarm/mcp-registry` fork has secret scanning enabled with **0 open
 alerts**. GitHub notifications show 0 unread; the security log shows the
 account-level `user.sign_in_from_unrecognized_device` / `user.new_device_used`
-event and the Cursor Directory / GitHub CLI OAuth authorizations. That is a
-device/OAuth review item, not a leaked-secret alert. No alert or session was
-changed; secret scanning and push protection were enabled on `mcp`.
+event and the Cursor Directory / GitHub CLI OAuth authorizations. The user
+confirmed the review of that device/OAuth event on 2026-11-15; no alert or
+session was changed, and secret scanning and push protection were enabled on
+`mcp`.
 
 The public history is the source-only initial commit plus the release-content
 and status commits; a full-history and working-tree scan for `csw_` keys,
