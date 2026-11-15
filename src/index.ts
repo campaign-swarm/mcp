@@ -13,6 +13,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
 import { z } from "zod";
+import { installOAuth } from "./oauth.ts";
 
 const PORT = Number(process.env.MCP_PORT ?? 3101);
 const API_BASE = (process.env.INTERNAL_API_URL ?? "http://localhost:8000").replace(
@@ -1248,6 +1249,11 @@ async function main() {
   const app = express();
   app.use(express.json({ limit: "2mb" }));
 
+  // OAuth 2.1 for Claude/OpenAI sits in front of the same hosted endpoint. It
+  // is enabled only when OAUTH_ENCRYPTION_KEY is configured; API-key clients
+  // keep working either way.
+  const oauth = installOAuth(app, authenticate);
+
   // Every MCP request must carry the org key, and it must be a real one.
   //
   // Without this gate an unauthenticated harness still gets a 200 and reads the
@@ -1258,7 +1264,11 @@ async function main() {
   app.use("/mcp", async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.method !== "POST") return next();
     const reject = (status: number, message: string) => {
-      res.setHeader("WWW-Authenticate", `Bearer realm="${BRAND.name}"`);
+      let challenge = `Bearer realm="${BRAND.name}"`;
+      if (oauth.enabled) {
+        challenge += `, resource_metadata="${oauth.prmUrl}", scope="mcp:tools"`;
+      }
+      res.setHeader("WWW-Authenticate", challenge);
       res.status(status).json({
         jsonrpc: "2.0",
         error: { code: -32001, message },
@@ -1269,18 +1279,50 @@ async function main() {
     if (!key) {
       return reject(
         401,
-        `This MCP server needs a ${BRAND.name} API key. Create one in Settings → API keys and send it as \`Authorization: Bearer csw_…\`.`
+        `This MCP server needs a ${BRAND.name} API key. Create one in Settings → API keys and send it as \`Authorization: Bearer csw_…\`, or authorize this client with OAuth.`
       );
     }
-    if (!keyShaped(key)) return reject(401, "That API key was not accepted");
-    try {
-      await authenticate(key);
-    } catch (err) {
-      if (err instanceof ApiError) return reject(err.status === 403 ? 403 : 401, err.message);
-      // The API is unreachable: say so rather than pretending the key is bad.
-      return reject(503, `${BRAND.name} could not be reached to verify that key`);
+
+    // Existing API-key clients keep the direct path.
+    if (key.startsWith("csw_")) {
+      if (!keyShaped(key)) return reject(401, "That API key was not accepted");
+      try {
+        await authenticate(key);
+      } catch (err) {
+        if (err instanceof ApiError) return reject(err.status === 403 ? 403 : 401, err.message);
+        // The API is unreachable: say so rather than pretending the key is bad.
+        return reject(503, `${BRAND.name} could not be reached to verify that key`);
+      }
+      return next();
     }
-    next();
+
+    if (!oauth.enabled || !oauth.bearer) {
+      return reject(401, "OAuth is not configured on this server yet.");
+    }
+
+    // OAuth access tokens are opaque and map to an encrypted API key in the
+    // server-side authorization store. Validate that key again before use, then
+    // hand the MCP transport the API key it already knows how to forward.
+    return oauth.bearer(req, res, () => {
+      void (async () => {
+        let opened: { apiKey: string; orgId: string; role: string };
+        try {
+          opened = oauth.openUserId!((req as any).auth?.userId ?? "");
+        } catch {
+          return reject(401, "That authorization is no longer valid.");
+        }
+        try {
+          await authenticate(opened.apiKey);
+        } catch (err) {
+          if (err instanceof ApiError) {
+            return reject(err.status === 403 ? 403 : 401, err.message);
+          }
+          return reject(503, `${BRAND.name} could not be reached to verify that authorization`);
+        }
+        req.headers.authorization = `Bearer ${opened.apiKey}`;
+        next();
+      })();
+    });
   });
 
   // Stateless streamable HTTP: a fresh server + transport per request, so the
@@ -1340,6 +1382,14 @@ async function main() {
       tools: TOOLS.length,
       read_tools: TOOLS.filter((t) => !t.write).length,
       write_tools: TOOLS.filter((t) => t.write).length,
+      oauth: oauth.enabled
+        ? {
+            enabled: true,
+            issuer: oauth.issuer,
+            resource: oauth.resource.href,
+            scopes: ["mcp:tools"],
+          }
+        : { enabled: false },
     });
   });
 

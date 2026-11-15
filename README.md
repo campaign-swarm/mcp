@@ -25,9 +25,51 @@ Anonymous requests receive `401`. The key resolves the organization and role on
 the API; read tools work for any valid key, and write tools require an editor,
 admin, or owner key.
 
+## OAuth 2.1 for Claude and OpenAI
+
+The hosted endpoint also supports OAuth 2.1 authorization-code + PKCE for
+clients that require OAuth. Discovery is published at:
+
+```
+https://mcp.campaignswarm.com/.well-known/oauth-protected-resource/mcp
+https://mcp.campaignswarm.com/.well-known/oauth-authorization-server
+```
+
+The server supports Client ID Metadata Documents (CIMD), Dynamic Client
+Registration (DCR), S256 PKCE, resource indicators, refresh-token rotation, and
+the `mcp:tools` scope. The consent page asks for a Campaign Swarm API key; use
+a read-only key for evaluation. The key is sent only to Campaign Swarm, is
+encrypted in the authorization store, and is never placed in a URL.
+
+OAuth is enabled on the server by setting `OAUTH_ENCRYPTION_KEY` and a writable
+`OAUTH_STATE_FILE`; see `.env.example`. API-key clients continue to work with
+or without OAuth enabled.
+
+The implementation is in this repository, but the hosted service must be
+deployed from this commit with those variables before OAuth clients can use it.
+Until that deployment, `https://mcp.campaignswarm.com/.well-known/oauth-protected-resource/mcp`
+returns 404 and Claude/OpenAI cannot complete discovery; API-key clients keep
+working. Do not submit the hosted endpoint to an OAuth-only directory until the
+live discovery endpoints return 200.
+
 ## Client configuration
 
 ### Claude Desktop / Claude Code
+
+OAuth (preferred once the hosted deployment is live) — no header is needed:
+
+```json
+{
+  "mcpServers": {
+    "campaign-swarm": {
+      "type": "http",
+      "url": "https://mcp.campaignswarm.com/mcp"
+    }
+  }
+}
+```
+
+API-key fallback:
 
 ```json
 {
@@ -97,3 +139,4 @@ proxy in production.
 - Support: support@campaignswarm.com
 - Registry descriptor: [`server.json`](./server.json)
 - Release and marketplace status: [`MCP-RELEASE.md`](./MCP-RELEASE.md)
+- Claude, OpenAI, and Cursor submission pack: [`../docs/MCP-CLIENT-SUBMISSIONS.md`](../docs/MCP-CLIENT-SUBMISSIONS.md)

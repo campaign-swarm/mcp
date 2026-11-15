@@ -14,6 +14,12 @@ importers:
       express:
         specifier: ^5.3.0
         version: 5.3.0
+      express-rate-limit:
+        specifier: ^8.2.1
+        version: 8.7.1(express@5.3.0)
+      mcp-oauth-server:
+        specifier: 1.1.0
+        version: 1.1.0(express-rate-limit@8.7.1(express@5.3.0))(express@5.3.0)
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -448,6 +454,13 @@ packages:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
 
+  mcp-oauth-server@1.1.0:
+    resolution: {integrity: sha512-6jo0Q/p5LsZQ5g8tlQdycEWGaD8KQGbYCgS5uZlSn+BhBnNdCW5qM+UlMULTeUGlxQWNWs9mkSIaPeoFp+EG3w==}
+    engines: {node: '>=18.17'}
+    peerDependencies:
+      express: '>=4'
+      express-rate-limit: '>=7.5'
+
   media-typer@1.1.1:
     resolution: {integrity: sha512-yz3xRaG20c6/BOzvYoDaGtPmGscs7YivItZEEqe6GbwNfHuxu9YNmvnEkMzKldAGY4/80pRcQRZSEnhquk9XuQ==}
     engines: {node: '>= 0.8'}
@@ -611,6 +624,9 @@ packages:
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
 snapshots:
 
@@ -1008,6 +1024,15 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
+  mcp-oauth-server@1.1.0(express-rate-limit@8.7.1(express@5.3.0))(express@5.3.0):
+    dependencies:
+      debug: 4.4.3
+      express: 5.3.0
+      express-rate-limit: 8.7.1(express@5.3.0)
+      zod: 4.6.7
+    transitivePeerDependencies:
+      - supports-color
+
   media-typer@1.1.1: {}
 
   merge-descriptors@2.0.0: {}
@@ -1173,3 +1198,5 @@ snapshots:
       zod: 3.25.76
 
   zod@3.25.76: {}
+
+  zod@4.6.7: {}
