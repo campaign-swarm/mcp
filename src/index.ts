@@ -1247,6 +1247,10 @@ export function keyShaped(key: string): boolean {
 async function main() {
   await refreshBranding();
   const app = express();
+  // nginx terminates TLS and proxies from loopback. Trust only that hop so the
+  // OAuth rate limiter sees the real client address without trusting arbitrary
+  // X-Forwarded-For values from the internet.
+  app.set("trust proxy", "loopback");
   app.use(express.json({ limit: "2mb" }));
 
   // OAuth 2.1 for Claude/OpenAI sits in front of the same hosted endpoint. It
