@@ -52,7 +52,13 @@ authenticate as the owner of the `campaign-swarm` namespace. The repository is
 public. `.github/workflows/publish-mcp.yml` publishes through GitHub OIDC, which
 is the official path that can publish an organization namespace without the
 interactive device flow. It runs on `workflow_dispatch` and `v*` tags, validates
-`server.json`, logs in with `github-oidc`, and publishes.
+`server.json`, logs in with `github-oidc`, and publishes. The first run on
+2026-11-15 succeeded and published version `0.1.0`; the registry reports status
+`active` and `isLatest: true`.
+
+The validator warns that the current registry schema is `2025-12-11` and this
+descriptor uses `2025-09-29`. The old schema is still accepted; migrate before
+the next version publish if the registry drops support.
 
 ## Published release content
 
@@ -76,9 +82,9 @@ credentials; no real API key, token, OTP, or credential is committed.
 | Glama | Hosted connector submitted and marked unhealthy after two 401 checks because the Glama test profile sends no Authorization header. Glama holds no Campaign Swarm credential. A dedicated read-only test key still must be created and entered under Admin → Test Profile; no key is stored in this repository. |
 | Launch MCP | Submitted through the keyless REST API. Live readback returns `status: pending`, transport `hosted`, category `Productivity`, and no listing URL. No authenticated edit endpoint exists for a pending submission, so it was left intact rather than duplicated. |
 | AgenticSkills | Submitted through the public MCP form; pending weekly triage. The public repo serves the full release copy. |
-| Official MCP Registry | Not yet listed. The live published `server.json` validates; the registry search returns `count: 0`. The device flow cannot publish the organization namespace and the previous non-interactive token exchange returned 401. The GitHub OIDC workflow is now committed; the first publish run result is recorded in the rollout ledger. |
-| GitHub MCP Registry | Follows the official registry; no separate form. |
-| PulseMCP | Submissions paused since September 3, 2026; imports the official registry when it reopens. |
+| Official MCP Registry | **Published** `io.github.campaign-swarm/mcp@0.1.0` on 2026-11-15 via GitHub OIDC. Registry status `active`, `publishedAt` `2026-11-15T05:04:50.296351Z`, search count 1. Publish run [43679498960](https://github.com/campaign-swarm/mcp/actions/runs/43679498960) succeeded; no device code, PAT, or registry token. |
+| GitHub MCP Registry | Follows the official registry; the entry now exists. No separate form. |
+| PulseMCP | Submissions paused since September 3, 2026; it imports the official registry when it reopens. The official entry now exists, so no separate submission is needed. |
 | MCP Market | Submitted to the $0 Free Queue; API check returns `exists:false`; pending ~4–6 weeks. The listing is generated from the public repository with the full release copy. Paid upgrades ($29/$69) not purchased. |
 | MCP.so | Account created under support@; authenticated free plan returns “Free submissions are currently paused”; $39 paid path not purchased. |
 | Docker MCP Catalog | Parked by user request. PR #7137 remains open; ci.yaml run 43659671963 is action_required with 0 jobs and awaits a Docker maintainer’s approval. |
