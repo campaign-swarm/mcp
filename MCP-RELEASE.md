@@ -31,22 +31,29 @@ license prerequisite is satisfied.
 ## Published release content
 
 `README.md`, `LICENSE`, `server.json`, and this file are committed to the public
-default branch so repo-derived listings can use the full release copy. The
-`csw_` values in `src/index.test.ts` are synthetic test fixtures, not live
+default branch so repo-derived listings can use the full release copy. On
+2026-11-15 all four were fetched over HTTPS from
+`https://raw.githubusercontent.com/campaign-swarm/mcp/main/`; every file
+returned HTTP 200, and the README, LICENSE, and `server.json` bytes matched the
+local SHA-256 hashes exactly. The live `server.json` was revalidated with
+`mcp-publisher validate` and returned `✅ server.json is valid` (with the known
+2025-09-29 schema deprecation warning).
+
+The `csw_` values in `src/index.test.ts` are synthetic test fixtures, not live
 credentials; no real API key, token, OTP, or credential is committed.
 
 ## Marketplace status
 
 | Destination | Status |
 | --- | --- |
-| mcpservers.org | Submitted to the free queue; review quoted at two weeks. |
+| mcpservers.org | Submitted to the free queue; review quoted at two weeks. The public repo now serves the full release copy for its review. |
 | Glama | Hosted connector submitted and currently marked unhealthy after two 401 checks because the test profile sends no Authorization header. Glama holds no Campaign Swarm credential; awaiting the user's dedicated viewer key under Admin → Test Profile. No key is stored in this repository. |
-| Launch MCP | Submitted through the keyless REST API; live status page says “In review”; no public listing URL yet. |
-| AgenticSkills | Submitted through the public MCP form; pending weekly triage. |
-| Official MCP Registry | Descriptor validates; repository public; no successful publish because the GitHub CLI token exchange returned 401. Interactive device flow/PAT publisher authorization remains. |
+| Launch MCP | Submitted through the keyless REST API. `GET /submissions/ba58e072-7619-4e51-b426-9081d77e55f2` on 2026-11-15 returns `status: pending`, transport `hosted`, category `Productivity`, and no listing URL. No public edit endpoint exists for a pending submission, so it was left intact rather than duplicated. |
+| AgenticSkills | Submitted through the public MCP form; pending weekly triage. The public repo now serves the full release copy. |
+| Official MCP Registry | The live published `server.json` validates (✅, with the 2025-09-29 deprecation warning); registry search returns `count: 0`. No successful publish because the GitHub CLI token exchange returned 401. Interactive device flow/PAT publisher authorization remains. |
 | GitHub MCP Registry | Follows the official registry; no separate form. |
 | PulseMCP | Submissions paused since September 3, 2026; imports the official registry when it reopens. |
-| MCP Market | Submitted to the $0 Free Queue; API check returns `exists:false`; pending ~4–6 weeks. Paid upgrades ($29/$69) not purchased. |
+| MCP Market | Submitted to the $0 Free Queue; API check returns `exists:false`; pending ~4–6 weeks. The listing is generated from the now-public repository with the full release copy. Paid upgrades ($29/$69) not purchased. |
 | MCP.so | Account created under support@; authenticated free plan returns “Free submissions are currently paused”; $39 paid path not purchased. |
 | Docker MCP Catalog | Parked by user request. PR #7137 remains open; ci.yaml run 43659671963 is action_required with 0 jobs and awaits a Docker maintainer’s approval. |
 | Smithery | Sign-in, dashboard, /new, and /servers/new all show the October 31, 2026 shutdown notice; no submission path. |
@@ -68,8 +75,8 @@ Cursor Directory / GitHub CLI OAuth authorizations. That is a device/OAuth
 review item, not a leaked-secret alert. No alert or session was changed; secret
 scanning and push protection were enabled on `mcp`.
 
-The public history is the source-only initial commit plus this release-content
-commit; a full-history and working-tree scan for `csw_` keys,
+The public history is the source-only initial commit plus the release-content
+and status commits; a full-history and working-tree scan for `csw_` keys,
 GitHub/OpenAI/AWS/Slack/Google/SendGrid tokens, JWTs, and private-key blocks
 found no high-risk credential. The test fixture values are synthetic. No `.env` or credential file
 is tracked; `v1/creds/creds.txt` is outside the repository and remains mode
