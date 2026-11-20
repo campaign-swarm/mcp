@@ -537,6 +537,9 @@ export const TOOLS: ToolSpec[] = [
         // Provider/Graph details stay in the internal audit trail. MCP callers
         // get the queue state and a safe attention flag, not raw Meta errors.
         needs_attention: row.status === "needs_attention" || row.status === "failed",
+        // Only a live post on a platform whose API can edit it. Dropping this
+        // left an agent unable to tell whether edit_published_post was usable.
+        editable: Boolean(row.editable),
         approval: row.approval,
       }));
       return JSON.stringify(
