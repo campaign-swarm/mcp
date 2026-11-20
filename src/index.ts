@@ -5,8 +5,9 @@
  * key (`csw_…`) — the same keys the dashboard issues — and is forwarded to the
  * FastAPI BFF, which resolves the org, the role and the audit trail.
  *
- * Read tools work on any key. Write tools need an editor key and always create
- * an approval item rather than acting silently.
+ * Read tools work on any key. Write tools need an editor key; anything that
+ * speaks publicly or spends money creates an approval item instead of acting
+ * silently. Approving, rejecting and retracting are dashboard-only on purpose.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -814,7 +815,7 @@ export const TOOLS: ToolSpec[] = [
   },
   {
     name: "create_post_draft",
-    title: "Create a post draft",
+    title: "Create a content plan",
     description:
       "Create a content plan so the swarm can produce assets for it. Nothing is published by this tool.",
     write: true,
@@ -1047,6 +1048,357 @@ export const TOOLS: ToolSpec[] = [
         },
       });
       return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "compose_post",
+    title: "Compose a post directly",
+    description:
+      "Create a post without a plan or campaign: caption and/or already-uploaded media, one channel, now or at a time. Submitting puts it in the approval queue — nothing publishes without a human decision. Use list_post_drafts to find drafts and their queue state.",
+    write: true,
+    schema: z.object({
+      social_account_id: z
+        .string()
+        .min(1)
+        .describe("The channel to post from (see list_social_accounts)"),
+      caption: z.string().max(10000).optional().describe("The post text"),
+      media_asset_id: z
+        .string()
+        .optional()
+        .describe(
+          "An image/video already uploaded to this workspace (see get_content_assets). Media is optional."
+        ),
+      project_id: z.string().optional().describe("Brand to scope the post to"),
+      scheduled_for: z
+        .string()
+        .optional()
+        .describe("ISO-8601 timestamp; omit to publish as soon as it is approved"),
+      publish_now: z
+        .boolean()
+        .optional()
+        .describe("Ignored when scheduled_for is set. Approval still applies."),
+    }),
+    handler: async (caller, args) => {
+      if (!canWrite(caller.role)) {
+        throw new ApiError("This key cannot compose posts", 403);
+      }
+      if (!args.caption?.trim() && !args.media_asset_id) {
+        throw new ApiError("Give the post a caption or a media_asset_id", 400);
+      }
+      const draft = await api(caller, "post-drafts", {
+        method: "POST",
+        body: {
+          caption: args.caption,
+          social_account_id: args.social_account_id,
+          project_id: args.project_id,
+          source: "mcp",
+        },
+      });
+      if (args.media_asset_id) {
+        await api(caller, `post-drafts/${draft.id}`, {
+          method: "PATCH",
+          body: { media_asset_id: args.media_asset_id },
+        });
+      }
+      const submitted = await api(caller, `post-drafts/${draft.id}/submit`, {
+        method: "POST",
+        body: args.scheduled_for && !args.publish_now
+          ? { scheduled_for: args.scheduled_for }
+          : {},
+      });
+      return JSON.stringify(
+        {
+          draft_id: draft.id,
+          queue_id: submitted.queue?.id ?? null,
+          approval_id: submitted.approval_id ?? null,
+          status: submitted.status,
+          next: submitted.approval_id
+            ? "A human must approve it in the dashboard before it publishes."
+            : "The publisher will pick it up on its next pass.",
+        },
+        null,
+        2
+      );
+    },
+  },
+  {
+    name: "list_post_drafts",
+    title: "List composed posts",
+    description:
+      "Manual posts made from the composer, with their queue and approval state. These are not plan assets.",
+    write: false,
+    schema: z.object({
+      status: z
+        .enum(["draft", "ready", "queued", "published", "failed"])
+        .optional()
+        .describe("Filter by draft state"),
+      limit: z.number().int().min(1).max(50).optional(),
+    }),
+    handler: async (caller, args) => {
+      const query: Record<string, string> = {};
+      if (args.status) query.status = args.status;
+      query.limit = String(args.limit ?? 20);
+      const body = await api(caller, "post-drafts", { query });
+      return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "get_post_draft",
+    title: "Read one composed post",
+    description:
+      "One composer draft with its media, queue row and approval state. Use it before editing so the change is made against the record that exists.",
+    write: false,
+    schema: z.object({ draft_id: z.string().min(1) }),
+    handler: async (caller, args) => {
+      const body = await api(caller, `post-drafts/${args.draft_id}`);
+      return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "update_post_draft",
+    title: "Edit a composed post",
+    description:
+      "Change a draft's words, channel, brand, media or Reddit fields. A queued draft is locked — its queue row already holds the copy an approver is reading — so cancel that row first. Editing never publishes.",
+    write: true,
+    schema: z.object({
+      draft_id: z.string().min(1),
+      caption: z.string().max(10000).optional(),
+      social_account_id: z
+        .string()
+        .optional()
+        .describe("Move the draft to another channel (see list_social_accounts)"),
+      project_id: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Brand to scope it to; null clears it"),
+      media_asset_id: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Attach an uploaded asset, or null to remove the media"),
+      title: z.string().max(300).optional().describe("Reddit only"),
+      subreddit: z.string().max(100).optional().describe("Reddit only"),
+      visibility: z.string().max(20).optional(),
+    }),
+    handler: async (caller, args) => {
+      if (!canWrite(caller.role)) {
+        throw new ApiError("This key cannot edit drafts", 403);
+      }
+      const { draft_id, ...fields } = args;
+      const body = Object.fromEntries(
+        Object.entries(fields).filter(([, value]) => value !== undefined)
+      );
+      if (!Object.keys(body).length) {
+        throw new ApiError("Give at least one field to change", 400);
+      }
+      const updated = await api(caller, `post-drafts/${draft_id}`, {
+        method: "PATCH",
+        body,
+      });
+      return JSON.stringify(updated, null, 2);
+    },
+  },
+  {
+    name: "delete_post_draft",
+    title: "Delete a composed post",
+    description:
+      "Remove a draft that has not been queued. A queued or published one has to be cancelled or retracted in the dashboard first, so a live post is never deleted from here.",
+    write: true,
+    schema: z.object({ draft_id: z.string().min(1) }),
+    handler: async (caller, args) => {
+      if (!canWrite(caller.role)) {
+        throw new ApiError("This key cannot delete drafts", 403);
+      }
+      const body = await api(caller, `post-drafts/${args.draft_id}`, {
+        method: "DELETE",
+      });
+      return JSON.stringify(body ?? { ok: true, draft_id: args.draft_id }, null, 2);
+    },
+  },
+  {
+    name: "submit_post_draft",
+    title: "Send a draft for approval",
+    description:
+      "Queue an existing draft exactly as it stands, now or at a time. It always lands in the human approval inbox — approving it is a dashboard decision and is deliberately not exposed here.",
+    write: true,
+    schema: z.object({
+      draft_id: z.string().min(1),
+      scheduled_for: z
+        .string()
+        .optional()
+        .describe("ISO-8601 timestamp; omit to publish as soon as it is approved"),
+    }),
+    handler: async (caller, args) => {
+      if (!canWrite(caller.role)) {
+        throw new ApiError("This key cannot submit drafts", 403);
+      }
+      const body = await api(caller, `post-drafts/${args.draft_id}/submit`, {
+        method: "POST",
+        body: args.scheduled_for ? { scheduled_for: args.scheduled_for } : {},
+      });
+      return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "manage_publish_queue",
+    title: "Cancel, reschedule or retry a queued post",
+    description:
+      "Change a queued post without deciding its approval: cancel it, move its time, or retry one that failed. Rescheduling a pending post leaves it pending, so it never skips the human decision, and a live post has to be retracted in the dashboard — retract is deliberately not a tool.",
+    write: true,
+    schema: z.object({
+      queue_id: z
+        .string()
+        .min(1)
+        .describe("The queue row (see list_publish_queue)"),
+      action: z.enum(["cancel", "reschedule", "retry"]),
+      scheduled_for: z
+        .string()
+        .optional()
+        .describe("ISO-8601 timestamp; required for reschedule"),
+    }),
+    handler: async (caller, args) => {
+      if (!canWrite(caller.role)) {
+        throw new ApiError("This key cannot change the queue", 403);
+      }
+      if (args.action === "reschedule" && !args.scheduled_for) {
+        throw new ApiError("scheduled_for is required to reschedule", 400);
+      }
+      const body: Record<string, unknown> = { action: args.action };
+      if (args.scheduled_for) body.scheduled_for = args.scheduled_for;
+      const result = await api(caller, `publish/queue/${args.queue_id}`, {
+        method: "PATCH",
+        body,
+      });
+      return JSON.stringify(result, null, 2);
+    },
+  },
+  {
+    name: "run_publish_queue",
+    title: "Publish due posts now",
+    description:
+      "Run one publisher pass immediately instead of waiting for the timer. It publishes anything already approved and due; it never approves a pending post.",
+    write: true,
+    schema: z.object({}),
+    handler: async (caller) => {
+      if (!canWrite(caller.role)) {
+        throw new ApiError("This key cannot run the publisher", 403);
+      }
+      return JSON.stringify(
+        await api(caller, "publish/run", { method: "POST" }),
+        null,
+        2
+      );
+    },
+  },
+  {
+    name: "get_publish_attempts",
+    title: "Attempt history for a queued post",
+    description:
+      "Every publish attempt for one queue row with its time and result — read this to explain a failure before retrying.",
+    write: false,
+    schema: z.object({
+      queue_id: z.string().min(1).describe("The publish queue row id"),
+    }),
+    handler: async (caller, args) => {
+      const body = await api(caller, `publish/attempts/${args.queue_id}`);
+      return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "edit_published_post",
+    title: "Edit a live post's caption",
+    description:
+      "Replace the words on a post that is already live, where the platform allows it (Facebook today). This is an edit, not a republish: external id, permalink and publication time stand. A channel that cannot edit answers with the reason and the retract-and-repost path.",
+    write: true,
+    schema: z.object({
+      queue_id: z
+        .string()
+        .min(1)
+        .describe("The published queue row (see list_publish_queue)"),
+      caption: z.string().min(1).max(10000),
+    }),
+    handler: async (caller, args) => {
+      if (!canWrite(caller.role)) {
+        throw new ApiError("This key cannot edit published posts", 403);
+      }
+      const body = await api(caller, `publish/queue/${args.queue_id}/edit`, {
+        method: "POST",
+        body: { caption: args.caption },
+      });
+      return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "check_post_delivery",
+    title: "Check published posts are still live",
+    description:
+      "Ask each platform whether this workspace's published posts still exist. A post is called removed only when the platform is conclusive (404 or Graph 803) or when its own publication window was fully enumerated without it; anything less is reported as unreadable, never as deleted.",
+    write: true,
+    schema: z.object({}),
+    handler: async (caller) => {
+      if (!canWrite(caller.role)) {
+        throw new ApiError("This key cannot run a delivery check", 403);
+      }
+      const body = await api(caller, "publish/reconcile", { method: "POST" });
+      return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "get_channel_capabilities",
+    title: "What each channel can do",
+    description:
+      "Per-channel capabilities, scopes and what still needs a platform review — the same catalogue the Channel Capabilities page shows.",
+    write: false,
+    schema: z.object({}),
+    handler: async (caller) => {
+      const body = await api(caller, "social/channels/capabilities");
+      return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "get_publish_settings",
+    title: "Publishing limits per channel",
+    description:
+      "Caption budgets, accepted post kinds and the reason when a channel is limited. Read it before composing so a post is not refused after the fact.",
+    write: false,
+    schema: z.object({}),
+    handler: async (caller) => {
+      const body = await api(caller, "publish/settings");
+      return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "get_llm_status",
+    title: "Which model is answering",
+    description:
+      "The configured text provider, model and gateway host — never the key. Owners and admins only.",
+    write: false,
+    schema: z.object({}),
+    handler: async (caller) => {
+      const body = await api(caller, "llm/status");
+      return JSON.stringify(body, null, 2);
+    },
+  },
+  {
+    name: "test_llm_provider",
+    title: "Test the model provider",
+    description:
+      "Make one tiny completion against the configured gateway to prove it answers. Owners only; the probe bypasses workspace metering and never returns the key.",
+    write: true,
+    schema: z.object({}),
+    handler: async (caller) => {
+      if (caller.role !== "owner") {
+        throw new ApiError(
+          "Only the workspace owner can test the model provider",
+          403
+        );
+      }
+      return JSON.stringify(
+        await api(caller, "llm/test", { method: "POST" }),
+        null,
+        2
+      );
     },
   },
   {
